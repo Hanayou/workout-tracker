@@ -15,6 +15,7 @@ Sci-fi / Y2K HUD styling, because watching the line go up should feel good.
   - **ALL** exercises at once, or drill into **one** with the chips.
   - **Tap a node** to list every set from that day.
   - **Drag across the timeline** to list all sets in that window.
+  - **Range windows** — `1M / 3M / 6M / 1Y / ALL` to focus the chart (and its stats) on a trailing period.
   - In ALL mode, tap a legend entry to hide/show a line.
 - **Backup & restore** — export a `.json` snapshot to Drive / iCloud / email, and import it to restore or move devices (replace *or* merge).
 - **Works fully offline** once installed.
