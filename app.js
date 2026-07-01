@@ -492,8 +492,8 @@ function renderChart() {
     g += `<line class="grid-line" x1="${m.l}" y1="${y.toFixed(1)}" x2="${m.l + plotW}" y2="${y.toFixed(1)}"/>`;
     g += `<text class="axis-label" x="${m.l - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${fmtW(v)}</text>`;
   }
-  // x gridlines + labels
-  const nX = 4;
+  // x gridlines + labels — cap label count to the width so dates never overlap
+  const nX = Math.max(2, Math.min(6, Math.floor(plotW / 80))) - 1;
   for (let i = 0; i <= nX; i++) {
     const t = xMin + (xMax - xMin) * i / nX;
     const x = xScale(t);
@@ -882,15 +882,18 @@ function bindEvents() {
   $('#btn-wipe').addEventListener('click', wipeData);
   $('#btn-install-hint').addEventListener('click', showInstallHint);
 
-  // re-render the chart on viewport changes (orientation / resize) so it stays
-  // pixel-crisp — the SVG is sized to the container's real width.
-  let chartResizeRAF = 0;
-  window.addEventListener('resize', () => {
-    cancelAnimationFrame(chartResizeRAF);
-    chartResizeRAF = requestAnimationFrame(() => {
+  // re-render the chart on viewport changes (rotation / resize) so it stays
+  // pixel-crisp — the SVG is sized to the container's real width. setTimeout
+  // (not rAF) so it fires reliably once an iOS orientation change has settled.
+  let chartResizeTimer = 0;
+  const rerenderChart = () => {
+    clearTimeout(chartResizeTimer);
+    chartResizeTimer = setTimeout(() => {
       if ($('#view-progress').classList.contains('active')) renderChart();
-    });
-  });
+    }, 150);
+  };
+  window.addEventListener('resize', rerenderChart);
+  window.addEventListener('orientationchange', rerenderChart);
 }
 
 /* ---------------- Init ---------------- */
