@@ -457,23 +457,18 @@ function renderChart() {
     return;
   }
 
-  // ---- domains ----
-  const VBW = 1000, VBH = 520;
-  const m = { l: 52, r: 16, t: 18, b: 44 };
+  // ---- dimensions: draw in REAL pixels (viewBox == container px) so axis text
+  // and strokes stay legible on mobile instead of being scaled down ----
+  const VBW = Math.max(260, Math.round(wrap.clientWidth || 340));
+  const VBH = Math.min(340, Math.max(220, Math.round(VBW * 0.66)));
+  const m = { l: 42, r: 14, t: 14, b: 32 };
   const plotW = VBW - m.l - m.r, plotH = VBH - m.t - m.b;
 
-  let xMin, xMax;
-  if (chart.range === 'all') {
-    xMin = Math.min(...allPts.map(p => p.t));
-    xMax = Math.max(...allPts.map(p => p.t));
-    if (xMin === xMax) { xMin -= DAY; xMax += DAY; }
-  } else {
-    // fixed trailing window: show the whole selected period, up to today
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    xMin = cutoff;
-    xMax = Math.max(today.getTime(), ...allPts.map(p => p.t));
-    if (xMax <= xMin) xMax = xMin + DAY;
-  }
+  // x-domain always fits the (range-filtered) data, so points fill the width —
+  // the range chips zoom to recent data rather than padding out to today.
+  let xMin = Math.min(...allPts.map(p => p.t));
+  let xMax = Math.max(...allPts.map(p => p.t));
+  if (xMin === xMax) { xMin -= DAY; xMax += DAY; }
 
   let wMin = Math.min(...allPts.map(p => p.w));
   let wMax = Math.max(...allPts.map(p => p.w));
@@ -504,7 +499,7 @@ function renderChart() {
     const x = xScale(t);
     g += `<line class="grid-line" x1="${x.toFixed(1)}" y1="${m.t}" x2="${x.toFixed(1)}" y2="${m.t + plotH}"/>`;
     const anchor = i === 0 ? 'start' : i === nX ? 'end' : 'middle';
-    g += `<text class="axis-label" x="${x.toFixed(1)}" y="${m.t + plotH + 24}" text-anchor="${anchor}">${fmtShort(t)}</text>`;
+    g += `<text class="axis-label" x="${x.toFixed(1)}" y="${m.t + plotH + 19}" text-anchor="${anchor}">${fmtShort(t)}</text>`;
   }
 
   // series
@@ -623,7 +618,7 @@ function nearestPoint(x, y) {
     const d = (p.x - x) ** 2 + (p.y - y) ** 2;
     if (d < bd) { bd = d; best = p; }
   });
-  return bd <= 42 * 42 ? best : null;
+  return bd <= 30 * 30 ? best : null;
 }
 
 function highlightDot(exId, date) {
@@ -886,6 +881,16 @@ function bindEvents() {
   $('#btn-save-settings').addEventListener('click', saveSettingsFromInputs);
   $('#btn-wipe').addEventListener('click', wipeData);
   $('#btn-install-hint').addEventListener('click', showInstallHint);
+
+  // re-render the chart on viewport changes (orientation / resize) so it stays
+  // pixel-crisp — the SVG is sized to the container's real width.
+  let chartResizeRAF = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(chartResizeRAF);
+    chartResizeRAF = requestAnimationFrame(() => {
+      if ($('#view-progress').classList.contains('active')) renderChart();
+    });
+  });
 }
 
 /* ---------------- Init ---------------- */
@@ -902,8 +907,15 @@ function init() {
   tickClock();
   setInterval(tickClock, 30000);
 
-  // service worker
+  // service worker — core assets are network-first, so a deploy lands on the next
+  // online launch; when the new worker takes over we reload once to show it.
   if ('serviceWorker' in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || window.__ironosReloading) return;
+      window.__ironosReloading = true;
+      window.location.reload();
+    });
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
