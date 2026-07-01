@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>IRONOS // Gains Terminal</title>
+  <meta name="description" content="Personal offline gym training terminal. Track lifts, log gains, watch the line go up." />
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#05060d" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IRONOS" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+
+  <!-- Fonts (cached by service worker for offline use) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Animated background grid -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="bg-scan" aria-hidden="true"></div>
+
+  <div class="app">
+    <!-- ============ HEADER ============ -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">▚</span>
+        <h1 class="brand-name">IRON<span>OS</span></h1>
+      </div>
+      <div class="brand-sub" id="clock">// GAINS PROTOCOL v2.0</div>
+    </header>
+
+    <!-- ============ VIEWS ============ -->
+    <main class="views">
+
+      <!-- ---- LOG ---- -->
+      <section class="view active" id="view-log" data-view="log">
+        <div class="card hud" id="log-form-card">
+          <div class="card-title"><span>◆</span> LOG SET</div>
+          <form id="entry-form" autocomplete="off">
+            <div class="field">
+              <label for="f-exercise">EXERCISE</label>
+              <select id="f-exercise" required></select>
+              <div class="hint" id="f-hint">// select an exercise</div>
+            </div>
+
+            <div class="field">
+              <label for="f-weight">WEIGHT (<span class="unit-label">kg</span>)</label>
+              <div class="stepper">
+                <button type="button" class="step-btn" data-target="f-weight" data-dir="-1">–</button>
+                <input id="f-weight" type="number" inputmode="decimal" step="any" min="0" placeholder="0" />
+                <button type="button" class="step-btn" data-target="f-weight" data-dir="1">+</button>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="f-reps">REPS</label>
+                <div class="stepper">
+                  <button type="button" class="step-btn" data-target="f-reps" data-dir="-1" data-step="1">–</button>
+                  <input id="f-reps" type="number" inputmode="numeric" step="1" min="0" placeholder="12" />
+                  <button type="button" class="step-btn" data-target="f-reps" data-dir="1" data-step="1">+</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-sets">SETS</label>
+                <div class="stepper">
+                  <button type="button" class="step-btn" data-target="f-sets" data-dir="-1" data-step="1">–</button>
+                  <input id="f-sets" type="number" inputmode="numeric" step="1" min="0" placeholder="4" />
+                  <button type="button" class="step-btn" data-target="f-sets" data-dir="1" data-step="1">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="f-date">DATE</label>
+              <input id="f-date" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="f-notes">NOTES <span class="opt">(optional)</span></label>
+              <input id="f-notes" type="text" maxlength="140" placeholder="drop set, felt strong, etc." />
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="f-save">
+              <span>▶ COMMIT SET</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="card hud">
+          <div class="card-title"><span>≡</span> RECENT ACTIVITY</div>
+          <div id="recent-list"></div>
+        </div>
+      </section>
+
+      <!-- ---- PROGRESS ---- -->
+      <section class="view" id="view-progress" data-view="progress">
+        <div class="card hud">
+          <div class="card-title"><span>◊</span> GAINS MATRIX</div>
+          <div class="range-row" id="chart-range"></div>
+          <div class="chip-row" id="chart-chips"></div>
+          <div id="chart-stats" class="stat-grid"></div>
+          <div id="chart-wrap"></div>
+          <div id="chart-legend" class="legend"></div>
+        </div>
+        <div class="card hud" id="detail-card">
+          <div class="card-title"><span>⌖</span> READOUT</div>
+          <div id="chart-details" class="details">
+            <div class="empty-note">// tap a node or drag across the timeline to inspect</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---- EXERCISES ---- -->
+      <section class="view" id="view-exercises" data-view="exercises">
+        <div class="card hud">
+          <div class="card-title"><span>+</span> ADD MODULE</div>
+          <form id="exercise-form" autocomplete="off">
+            <div class="field">
+              <label for="e-name">NAME</label>
+              <input id="e-name" type="text" maxlength="40" placeholder="e.g. Pull Up" required />
+            </div>
+            <div class="field">
+              <label for="e-cat">CATEGORY</label>
+              <select id="e-cat">
+                <option value="Legs">Legs</option>
+                <option value="Chest">Chest</option>
+                <option value="Back">Back</option>
+                <option value="Shoulders">Shoulders</option>
+                <option value="Arms">Arms</option>
+                <option value="Core">Core</option>
+                <option value="Bodyweight">Bodyweight</option>
+                <option value="Cardio">Cardio</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary"><span>+ REGISTER</span></button>
+          </form>
+        </div>
+        <div class="card hud">
+          <div class="card-title"><span>≡</span> MODULE LIBRARY</div>
+          <div id="exercise-list"></div>
+        </div>
+      </section>
+
+      <!-- ---- DATA ---- -->
+      <section class="view" id="view-data" data-view="data">
+        <div class="card hud">
+          <div class="card-title"><span>▲▼</span> BACKUP // SYNC</div>
+          <p class="muted">All data lives on this device only. Export a snapshot to back it up anywhere (Drive, iCloud, email), and import it to restore or move devices.</p>
+          <button class="btn btn-primary" id="btn-export"><span>▼ EXPORT SNAPSHOT (.json)</span></button>
+          <label class="btn btn-ghost" for="import-file"><span>▲ IMPORT SNAPSHOT</span></label>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+
+        <div class="card hud">
+          <div class="card-title"><span>⚙</span> DEFAULTS</div>
+          <div class="field-row">
+            <div class="field">
+              <label for="s-reps">DEFAULT REPS</label>
+              <input id="s-reps" type="number" inputmode="numeric" min="1" step="1" />
+            </div>
+            <div class="field">
+              <label for="s-sets">DEFAULT SETS</label>
+              <input id="s-sets" type="number" inputmode="numeric" min="1" step="1" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="s-step">WEIGHT STEP</label>
+              <input id="s-step" type="number" inputmode="decimal" min="0.5" step="0.5" />
+            </div>
+            <div class="field">
+              <label for="s-unit">UNIT</label>
+              <select id="s-unit">
+                <option value="kg">kg</option>
+                <option value="lb">lb</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-ghost" id="btn-save-settings"><span>✓ SAVE DEFAULTS</span></button>
+        </div>
+
+        <div class="card hud">
+          <div class="card-title"><span>◈</span> SYSTEM</div>
+          <div id="data-stats" class="stat-grid"></div>
+          <button class="btn btn-ghost" id="btn-install-hint"><span>▚ INSTALL ON iPHONE</span></button>
+          <button class="btn btn-danger" id="btn-wipe"><span>⚠ WIPE ALL DATA</span></button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============ TAB BAR ============ -->
+    <nav class="tabbar">
+      <button class="tab active" data-view="log">
+        <span class="tab-ico">▲</span><span class="tab-txt">LOG</span>
+      </button>
+      <button class="tab" data-view="progress">
+        <span class="tab-ico">◊</span><span class="tab-txt">GAINS</span>
+      </button>
+      <button class="tab" data-view="exercises">
+        <span class="tab-ico">▤</span><span class="tab-txt">MODULES</span>
+      </button>
+      <button class="tab" data-view="data">
+        <span class="tab-ico">◈</span><span class="tab-txt">DATA</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============ MODAL ============ -->
+  <div id="modal-overlay" class="modal-overlay" hidden>
+    <div class="modal hud" role="dialog" aria-modal="true">
+      <div class="modal-head" id="modal-title">EDIT</div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- ============ TOAST ============ -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Local preview scaffolding (dev-only static server)
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
